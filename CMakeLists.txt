@@ -38,3 +38,4 @@ link_directories(
 )
 
 add_subdirectory(testsite/step-42)
+add_subdirectory(examples)
