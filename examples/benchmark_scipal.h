@@ -109,18 +109,18 @@ class CUDADriver {
       l = *h - w.dot(*h) * w + d - (*t - w.dot(*h) * w);
       avg_l += l;
       // update gradients
-      dd += 2.0 * l;
-      dh += 2 * l - 2 * l * w * w;
-      dw += 2 * l * w * (*t - *h);
+      dd = dd + 2.0 * l;
+      dh = dh + 2.0 * l - 2.0 * l * w * w;
+      dw = dw + 2.0 * l * w * (*t - *h);
     }
     // for the last data
     // compute l
     l = *h - w.dot(*h) * w + d - (*t - w.dot(*h) * w);
     avg_l += l;
     // update gradients
-    dd += 2 * l;
-    dh += 2 * l - 2 * l * w * w;
-    dw += 2 * l * w * (*t - *h);
+    dd = dd + 2.0 * l;
+    dh = dh + 2.0 * l - 2.0 * l * w * w;
+    dw = dw + 2.0 * l * w * (*t - *h);
     // average
     avg_l /= num_data;
     dd /= num_data;
