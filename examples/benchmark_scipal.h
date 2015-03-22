@@ -21,29 +21,74 @@ typedef std::chrono::microseconds microseconds;
 using namespace SciPAL;
 using namespace std;
 
-std::string clean_duration(std::string value) {
-  while(value.size() > 1 && value.back() == '0') {
-    value.pop_back();
+extern std::string clean_duration(std::string value);
+extern std::string duration_str(std::size_t duration_us);
+
+template <typename N>
+class CPUDriver {
+ private:
+  typedef N Number;
+  typedef blas BW;
+
+ public:
+  CPUDriver() {
+    BW::Init();
+  }
+  ~CPUDriver() {
+    BW::Shutdown();
   }
 
-  return value;
-}
+  // compute the loss function ||(hi - w'hiw) + d - (ti - w'tiw)||
+  // and the gradient on hi, ti, w, and d
+  void transh(int dim, int num_data) {
+    auto start_time = timer_clock::now();
+    CUDARND<Number, cpu> cpu_rnd(0);
+    // create num_data of random vectors h and t in host
+    std::vector<Vector<Number, blas>> hs(num_data, Vector<Number, blas>(dim));
+    std::vector<Vector<Number, blas>> ts(num_data, Vector<Number, blas>(dim));
+    for (int i = 0; i < num_data; ++i) {
+      cpu_rnd(hs[i]);
+      cpu_rnd(ts[i]);
+    }
+    // create the random vectors w and d in host
+    SciPAL::Vector<Number, BW> w(dim), d(dim);
+    cpu_rnd(w);
+    cpu_rnd(d);
+    // create the zero vectors dh, dw, dd, l, avg_l in host
+    SciPAL::Vector<Number, BW> dw(dim), dd(dim), dh(dim), l(dim), avg_l(dim);
+    dw = dd = dh = l = avg_l = 0;
+    auto end_time = timer_clock::now();
+    auto duration = std::chrono::duration_cast<microseconds>(end_time - start_time);
+    std::cout << "Initialization took " << duration_str(duration.count()) << std::endl;
 
-std::string duration_str(std::size_t duration_us) {
-  if(duration_us > 1000 * 1000) {
-    return clean_duration(std::to_string(duration_us / 1000.0 / 1000.0)) + "s";
-  } else if(duration_us > 1000) {
-    return clean_duration(std::to_string(duration_us / 1000.0)) + "ms";
-  } else {
-    return clean_duration(std::to_string(duration_us)) + "us";
+    start_time = timer_clock::now();
+    // loop
+    for (int i = 0; i < num_data; ++i) {
+      auto& h = hs[i];
+      auto& t = ts[i];
+      // compute l
+      l = h - w.dot(h) * w + d - (t - w.dot(t) * w);
+      avg_l += l;
+      // update gradients
+      dd = dd + 2.0 * l;
+      dh = dh + 2.0 * l - 2.0 * l * w * w;
+      dw = dw + 2.0 * l * w * (t - h);
+    }
+    // average
+    avg_l /= num_data;
+    dd /= num_data;
+    dh /= num_data;
+    dw /= num_data;
+    end_time = timer_clock::now();
+    duration = std::chrono::duration_cast<microseconds>(end_time - start_time);
+    std::cout << "Computation and IO took " << duration_str(duration.count()) << std::endl;
   }
-}
+};
 
 template <typename N>
 class CUDADriver {
  private:
   typedef N Number;
-  typedef SciPAL::CudaComplex<Number> cplxNumber;
   typedef cublas BW;
 
  public:
@@ -106,7 +151,7 @@ class CUDADriver {
       }
       first_tmp = !first_tmp;
       // compute l
-      l = *h - w.dot(*h) * w + d - (*t - w.dot(*h) * w);
+      l = *h - w.dot(*h) * w + d - (*t - w.dot(*t) * w);
       avg_l += l;
       // update gradients
       dd = dd + 2.0 * l;

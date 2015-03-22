@@ -5,6 +5,7 @@
 // For details about the cuda<something> functions have a look at
 // the CUDA reference manual.
 #include "benchmark_scipal.h"
+#include "benchmark_blaze.h"
 
 struct GPUInfo {
 
@@ -63,20 +64,47 @@ struct GPUInfo {
 
 };
 
+std::string clean_duration(std::string value) {
+  while(value.size() > 1 && value.back() == '0') {
+    value.pop_back();
+  }
+
+  return value;
+}
+
+std::string duration_str(std::size_t duration_us) {
+  if(duration_us > 1000 * 1000) {
+    return clean_duration(std::to_string(duration_us / 1000.0 / 1000.0)) + "s";
+  } else if(duration_us > 1000) {
+    return clean_duration(std::to_string(duration_us / 1000.0)) + "ms";
+  } else {
+    return clean_duration(std::to_string(duration_us)) + "us";
+  }
+}
+
+
 // @sect3{Function: main}
 //
 // As usual, the main function is pretty boring.
 int main(int argc, char *argv[]) {
   // This command is used to set the GPU on which we want to run our computations.
   // For a list of GPUs execute nvidia-smi.
-  int DevNo = 0;
-  GPUInfo gpu_info(DevNo);
+  // int DevNo = 0;
+  // GPUInfo gpu_info(DevNo);
+  //
+  // // Before we can benchmark SciPAL we have to get the GPU info.
+  // gpu_info.get();
+  //
+  // CUDADriver<double> double_cuda_drive;
+  // double_cuda_drive.transh(128, 128);
+  CPUDriver<double> double_cpu_drive;
+  double_cpu_drive.transh(64, 1000000);
 
-  // Before we can benchmark SciPAL we have to get the GPU info.
-  gpu_info.get();
+  BlazeDriver<double> double_blaze_drive;
+  double_blaze_drive.transh(64, 1000000);
 
-  CUDADriver<double> double_drive;
-  double_drive.transh(128, 128);
+  double_cpu_drive.transh(64, 1000000);
 
+  double_blaze_drive.transh(64, 1000000);
   return 0;
 }

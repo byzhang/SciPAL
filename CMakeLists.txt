@@ -11,7 +11,7 @@ set(CUDA_SEPARABLE_COMPILATION ON)
 set(CUDA_NVCC_FLAGS --ptxas-options=-v -std=c++11 -g -Xcompiler -fexceptions -Xcompiler -fPIC -Xcompiler -fopenmp)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_20,code=sm_20 -gencode arch=compute_35,code=sm_35)
 set(CMAKE_C_FLAGS "-g -fPIC -std=c99")
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-g -fPIC -std=c++11 -fopenmp")
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-g -fPIC -std=c++11 -fopenmp -mavx2")
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" CACHE STRING "c++ flags")
 SET (CMAKE_EXPORT_COMPILE_COMMANDS 1)
